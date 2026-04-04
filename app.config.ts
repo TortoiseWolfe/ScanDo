@@ -29,7 +29,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       usesNonExemptEncryption: false,
     },
   },
-  plugins: ['expo-router', './modules/scando-lidar'],
+  web: {
+    bundler: 'metro',
+    favicon: './assets/icon.png',
+  },
+  plugins: ['expo-router'],
   scheme: 'scando',
   experiments: {
     typedRoutes: true,

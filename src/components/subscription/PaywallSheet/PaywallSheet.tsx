@@ -1,5 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { colors } from '@/theme/colors';
+import { spacing, borderRadius } from '@/theme/spacing';
+import { fontFamily, fontWeight, fontSize } from '@/theme/typography';
 
 interface PaywallSheetProps {
   feature: string;
@@ -22,23 +25,36 @@ const PaywallSheet: React.FC<PaywallSheetProps> = ({
 }) => {
   return (
     <View style={styles.container}>
+      {/* Drag handle */}
       <View style={styles.handle} />
 
-      <Text style={styles.title}>Upgrade to Pro</Text>
+      {/* Header */}
+      <Text style={styles.title}>Unlock {feature}</Text>
       <Text style={styles.subtitle}>
-        <Text style={styles.featureHighlight}>{feature}</Text> requires a Pro
-        subscription
+        This feature requires a{' '}
+        <Text style={styles.proHighlight}>ScanDo Pro</Text> subscription
       </Text>
 
+      {/* Benefits list */}
       <View style={styles.benefitsList}>
         {PRO_BENEFITS.map((benefit, index) => (
           <View key={index} style={styles.benefitRow}>
-            <Text style={styles.checkmark}>&#10003;</Text>
+            <Text style={styles.checkmark}>{'\u2713'}</Text>
             <Text style={styles.benefitText}>{benefit}</Text>
           </View>
         ))}
       </View>
 
+      {/* Pricing */}
+      <View style={styles.pricingRow}>
+        <Text style={styles.price}>$9.99</Text>
+        <Text style={styles.pricePeriod}>/month</Text>
+        <Text style={styles.priceDivider}>{'  |  '}</Text>
+        <Text style={styles.price}>$79</Text>
+        <Text style={styles.pricePeriod}> one-time</Text>
+      </View>
+
+      {/* Subscribe button */}
       <Pressable
         style={({ pressed }) => [
           styles.subscribeButton,
@@ -48,9 +64,10 @@ const PaywallSheet: React.FC<PaywallSheetProps> = ({
         accessibilityRole="button"
         accessibilityLabel="Subscribe to Pro"
       >
-        <Text style={styles.subscribeText}>Subscribe</Text>
+        <Text style={styles.subscribeText}>SUBSCRIBE</Text>
       </Pressable>
 
+      {/* Restore link */}
       <Pressable
         style={({ pressed }) => [
           styles.restoreButton,
@@ -68,83 +85,114 @@ const PaywallSheet: React.FC<PaywallSheetProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#111',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 40,
+    backgroundColor: colors.surface.default,
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
+    borderTopWidth: 2,
+    borderTopColor: colors.subscription.pro,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxxl,
   },
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#444',
+    backgroundColor: colors.border.default,
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '800',
+    color: colors.text.primary,
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    color: '#999',
-    fontSize: 15,
+    color: colors.text.secondary,
+    fontSize: fontSize.sm,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
+    lineHeight: fontSize.sm * 1.5,
   },
-  featureHighlight: {
-    color: '#0a7ea4',
-    fontWeight: '600',
+  proHighlight: {
+    color: colors.subscription.pro,
+    fontWeight: fontWeight.semibold,
   },
   benefitsList: {
-    marginBottom: 28,
+    marginBottom: spacing.xl,
   },
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
+    paddingLeft: spacing.sm,
   },
   checkmark: {
-    color: '#0a7ea4',
-    fontSize: 16,
-    fontWeight: '700',
-    marginRight: 12,
+    color: colors.accent.secondary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.mono,
+    marginRight: spacing.md,
+    width: 20,
   },
   benefitText: {
-    color: '#fff',
-    fontSize: 15,
+    color: colors.text.primary,
+    fontSize: fontSize.sm,
     flex: 1,
+    lineHeight: fontSize.sm * 1.5,
+  },
+  pricingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+  },
+  price: {
+    color: colors.text.primary,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.mono,
+  },
+  pricePeriod: {
+    color: colors.text.tertiary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.regular,
+  },
+  priceDivider: {
+    color: colors.text.tertiary,
+    fontSize: fontSize.sm,
   },
   subscribeButton: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: colors.subscription.pro,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.sm,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   subscribeButtonPressed: {
-    backgroundColor: '#086a8a',
+    backgroundColor: colors.subscription.proGradientEnd,
   },
   subscribeText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+    color: colors.text.inverse,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
   restoreButton: {
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
   restoreButtonPressed: {
     opacity: 0.6,
   },
   restoreText: {
-    color: '#0a7ea4',
-    fontSize: 15,
-    fontWeight: '500',
+    color: colors.text.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
   },
 });
 

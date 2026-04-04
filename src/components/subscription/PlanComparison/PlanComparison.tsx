@@ -1,5 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
+import { fontFamily, fontWeight, fontSize } from '@/theme/typography';
 
 interface FeatureRow {
   label: string;
@@ -12,30 +15,35 @@ const FEATURES: FeatureRow[] = [
   { label: 'OBJ / DAE / STL export', free: true, pro: true },
   { label: 'Basic measurements', free: true, pro: true },
   { label: 'Up to 5 saved scans', free: true, pro: true },
-  { label: 'DWG / IFC / PLY / PDF export', free: false, pro: true },
-  { label: 'Unlimited scan storage', free: false, pro: true },
-  { label: 'High-res point clouds', free: false, pro: true },
-  { label: 'Advanced measurements', free: false, pro: true },
-  { label: 'Priority processing', free: false, pro: true },
+  { label: 'Multi-scan stitching', free: false, pro: true },
+  { label: 'Auto mesh cleanup', free: false, pro: true },
+  { label: 'Floor plan generation', free: false, pro: true },
+  { label: 'CAD-ready export (DWG, IFC)', free: false, pro: true },
+  { label: 'Cloud backup & batch export', free: false, pro: true },
 ];
 
 const PlanComparison: React.FC = () => {
   return (
     <View style={styles.container}>
+      {/* Column headers */}
       <View style={styles.headerRow}>
         <View style={styles.labelCol} />
         <View style={styles.planCol}>
-          <Text style={styles.planTitle}>Free</Text>
+          <Text style={styles.freeTitle}>FREE</Text>
         </View>
-        <View style={styles.planCol}>
-          <Text style={[styles.planTitle, styles.proTitle]}>Pro</Text>
+        <View style={[styles.planCol, styles.proColHeader]}>
+          <Text style={styles.proTitle}>PRO</Text>
         </View>
       </View>
 
+      {/* Feature rows */}
       {FEATURES.map((feature, index) => (
         <View
           key={index}
-          style={[styles.featureRow, index % 2 === 0 && styles.featureRowAlt]}
+          style={[
+            styles.featureRow,
+            index % 2 === 0 ? styles.featureRowEven : styles.featureRowOdd,
+          ]}
         >
           <View style={styles.labelCol}>
             <Text style={styles.featureLabel}>{feature.label}</Text>
@@ -45,7 +53,7 @@ const PlanComparison: React.FC = () => {
               {feature.free ? '\u2713' : '\u2717'}
             </Text>
           </View>
-          <View style={styles.planCol}>
+          <View style={[styles.planCol, styles.proColCell]}>
             <Text style={feature.pro ? styles.check : styles.cross}>
               {feature.pro ? '\u2713' : '\u2717'}
             </Text>
@@ -58,15 +66,19 @@ const PlanComparison: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#000',
-    paddingVertical: 16,
+    backgroundColor: colors.background.primary,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   headerRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#333',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.default,
+    backgroundColor: colors.background.secondary,
   },
   labelCol: {
     flex: 2,
@@ -75,36 +87,60 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  planTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  proColHeader: {
+    backgroundColor: 'rgba(251, 191, 36, 0.08)',
+    borderRadius: 4,
+    marginLeft: 4,
+    paddingVertical: 2,
+  },
+  proColCell: {
+    backgroundColor: 'rgba(251, 191, 36, 0.04)',
+  },
+  freeTitle: {
+    color: colors.text.tertiary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.mono,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   proTitle: {
-    color: '#0a7ea4',
+    color: colors.subscription.pro,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.mono,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  featureRowAlt: {
-    backgroundColor: '#0a0a0a',
+  featureRowEven: {
+    backgroundColor: colors.surface.default,
+  },
+  featureRowOdd: {
+    backgroundColor: colors.background.tertiary,
   },
   featureLabel: {
-    color: '#ccc',
-    fontSize: 14,
+    color: colors.text.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.regular,
   },
   check: {
-    color: '#0a7ea4',
-    fontSize: 18,
-    fontWeight: '700',
+    color: colors.accent.secondary,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.mono,
   },
   cross: {
-    color: '#555',
-    fontSize: 18,
-    fontWeight: '400',
+    color: colors.text.tertiary,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.regular,
+    fontFamily: fontFamily.mono,
+    opacity: 0.5,
   },
 });
 
