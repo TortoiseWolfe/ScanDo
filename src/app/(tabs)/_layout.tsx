@@ -103,7 +103,7 @@ export default function TabLayout() {
         name="library"
         options={{
           title: 'LIBRARY',
-          headerTitle: 'Scan Library',
+          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon name="library" focused={focused} />
           ),
@@ -113,7 +113,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'CONFIG',
-          headerTitle: 'Configuration',
+          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon name="settings" focused={focused} />
           ),

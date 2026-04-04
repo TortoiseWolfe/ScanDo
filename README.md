@@ -86,6 +86,60 @@ works without it.
 npx expo run:ios    # Requires macOS + Xcode 16+
 ```
 
+## App Map
+
+```
+┌─────────────────────────────────────────────────┐
+│                   TAB BAR                       │
+├───────────┬─────────────┬───────────────────────┤
+│   SCAN    │   LIBRARY   │        CONFIG         │
+└─────┬─────┴──────┬──────┴───────────┬───────────┘
+      │            │                  │
+      ▼            ▼                  ▼
+  ┌────────┐  ┌──────────┐     ┌──────────┐
+  │ Scan   │  │ Library  │     │ Settings │
+  │ Screen │  │ List     │     │ Screen   │
+  │        │  │ (5 scans)│     │ toggles, │
+  │ reticle│  │          │     │ quality, │
+  │ + SCAN │  │          │     │ units    │
+  │ button │  │          │     │          │
+  └────────┘  └────┬─────┘     └────┬─────┘
+      │            │                │
+      │ tap a      │ tap a          │ tap
+      │ scan ID    │ scan card      │ "Subscription"
+      ▼            ▼                ▼
+  ┌────────┐  ┌──────────┐    ┌─────────────┐
+  │ Scan   │  │ Scan     │    │ Subscription│
+  │ Detail │  │ Detail   │    │ Screen      │
+  │        │  │          │    │             │
+  │ stats  │  │ stats,   │    │ pricing,    │
+  │ grid   │  │ mesh box │    │ features,   │
+  └────────┘  └────┬─────┘    │ comparison  │
+                   │          └─────────────┘
+                   │ tap
+                   │ "EXPORT"
+                   ▼
+              ┌──────────┐
+              │ Export   │
+              │ Screen   │
+              │          │
+              │ format   │
+              │ picker → │
+              │ progress │
+              │ → done   │
+              └──────────┘
+```
+
+| #   | Screen                  | How to get there                    |
+| --- | ----------------------- | ----------------------------------- |
+| 1   | **Scan**                | SCAN tab (default)                  |
+| 2   | **Scan Detail**         | SCAN tab → complete a scan          |
+| 3   | **Library**             | LIBRARY tab                         |
+| 4   | **Library Scan Detail** | LIBRARY tab → tap any scan card     |
+| 5   | **Export**              | LIBRARY tab → scan card → EXPORT    |
+| 6   | **Settings**            | CONFIG tab                          |
+| 7   | **Subscription**        | CONFIG tab → tap "Subscription" row |
+
 ## Architecture
 
 ```
