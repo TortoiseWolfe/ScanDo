@@ -176,6 +176,26 @@ modules/          # Native Swift modules (ARKit, StoreKit, CloudKit)
 | KML     | Pro  | Google Earth (georeferenced)  |
 | GeoJSON | Pro  | GIS workflows (georeferenced) |
 
+## Roadmap
+
+### v2 — Exterior Facade Scanning (Drone Photogrammetry)
+
+- DJI Mobile SDK 5 — waypoint mission builder auto-generates flight paths
+- Apple RealityKit Object Capture — on-device photogrammetry, no cloud
+- Mesh merge — interior LiDAR + exterior photogrammetry = complete building
+- Target hardware: DJI Mini 4 Pro (~$760, under FAA 250g threshold)
+
+### v3 — Complete As-Built Platform
+
+- Multi-device collaborative scanning (multiple iPhones, same structure)
+- Web viewer — share a link, client views in browser
+- Change detection — rescan over time, diff highlights changes
+- BIM integration — publish to Autodesk Construction Cloud, Procore, Revit
+- Team workspaces — org accounts, project folders, role-based access
+- Report generation — auto-produce PDF site documentation
+
+Full spec: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+
 ## License
 
 Proprietary. All rights reserved.

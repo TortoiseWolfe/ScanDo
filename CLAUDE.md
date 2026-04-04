@@ -101,3 +101,25 @@ ComponentName/
 - iOS 17+
 - No Android (v1)
 - No account required for Free tier
+
+## Roadmap & Architectural Constraints
+
+Full roadmap spec: `docs/ROADMAP.md`
+
+### v2 — Drone Photogrammetry
+
+Exterior facade scanning via DJI Mobile SDK 5 + RealityKit Object Capture. Merged interior (LiDAR) + exterior (photogrammetry) = complete as-built model.
+
+### v3 — As-Built Platform
+
+Multi-device collaborative scanning, web viewer (share link, no app), change detection, BIM integration (Autodesk/Procore/Revit), team workspaces, report generation.
+
+### v1 Constraints (do not violate)
+
+- **Decoupled scan sessions** — `ScannerService` must not assume ARKit is the only mesh source. v2 adds photogrammetry as a second input.
+- **Source-agnostic serialization** — `MeshSerializer.serializeFromData()` takes raw vertices/faces/normals. Do not add ARMeshAnchor-specific logic to the export path.
+- **Single geolocation authority** — `GeoLocationManager` is the single source of truth for world coordinates. Both LiDAR and future photogrammetry meshes anchor to it.
+- **Format-driven exports** — Export pipeline is format-driven, not scan-type-driven. A mesh is a mesh.
+- **Extensible metadata** — `ScanMetadata` will gain `scanType` and `deviceId` fields in v2. Don't make assumptions about scan source.
+- **Streaming exports** — Export serializers must eventually support chunked writes for large multi-floor meshes. Don't buffer entire meshes in memory in new code.
+- **Org-aware CloudKit** — v1 uses `privateCloudDatabase`. Don't hardcode personal account assumptions — v3 needs org-level containers.
