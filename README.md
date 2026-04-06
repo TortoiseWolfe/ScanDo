@@ -2,6 +2,8 @@
 
 > As-built. LiDAR scanning for iPhone Pro with SketchUp-ready export.
 
+<a href="https://developer.apple.com/account" target="_blank">Apple Developer Account</a> · <a href="https://expo.dev" target="_blank">Expo Dashboard</a> · <a href="https://developer.apple.com/documentation/arkit" target="_blank">ARKit Docs</a> · <a href="https://docs.expo.dev/build/introduction/" target="_blank">EAS Build Docs</a> · <a href="https://developer.apple.com/storekit/" target="_blank">StoreKit 2</a> · <a href="https://developer.apple.com/icloud/cloudkit/" target="_blank">CloudKit</a> · <a href="https://github.com/TortoiseWolfe/ScanDo" target="_blank">GitHub Repo</a>
+
 ## What is ScanDo?
 
 ScanDo turns your iPhone's LiDAR sensor into a professional 3D scanner. Point your phone at a room, and ScanDo captures the geometry as a mesh you can import directly into SketchUp, Blender, AutoCAD, or Revit.
