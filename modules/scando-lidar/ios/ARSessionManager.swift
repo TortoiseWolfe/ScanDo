@@ -1,7 +1,7 @@
 import ARKit
 
 class ARSessionManager: NSObject, ARSessionDelegate {
-  private let session = ARSession()
+  let session = ARSession()
   private var currentAnchors: [UUID: ARMeshAnchor] = [:]
 
   var onMeshUpdate: (([String: Any]) -> Void)?

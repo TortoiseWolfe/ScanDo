@@ -2,12 +2,20 @@ import ExpoModulesCore
 import ARKit
 
 public class ScandoLidarModule: Module {
+  // Static reference to the current manager so ARSceneView can lazily find it.
+  // Weak to avoid retain cycles.
+  static weak var currentManager: ARSessionManager?
+
   private var sessionManager: ARSessionManager?
 
   public func definition() -> ModuleDefinition {
     Name("ScandoLidar")
 
     Events("onMeshUpdate", "onSessionStateChange", "onError")
+
+    View(ARSceneView.self) {
+      // No custom props for now
+    }
 
     Function("isLidarAvailable") { () -> Bool in
       return ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh)
@@ -34,6 +42,7 @@ public class ScandoLidarModule: Module {
       }
 
       self.sessionManager = manager
+      ScandoLidarModule.currentManager = manager
       manager.start()
       promise.resolve(nil)
     }
@@ -41,6 +50,7 @@ public class ScandoLidarModule: Module {
     AsyncFunction("stopSession") { (promise: Promise) in
       self.sessionManager?.stop()
       self.sessionManager = nil
+      ScandoLidarModule.currentManager = nil
       promise.resolve(nil)
     }
 

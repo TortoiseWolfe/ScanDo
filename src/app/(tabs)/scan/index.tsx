@@ -7,30 +7,51 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { useCameraPermissions } from 'expo-camera';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { fontFamily, fontSize, fontWeight } from '@/theme/typography';
 import { formatNumber } from '@/utils/format';
-import ScanPreview from '@/components/scan/ScanPreview/ScanPreview';
+import { ScandoLidar, ScandoLidarView } from '@modules/scando-lidar';
 
-type ScanState = 'idle' | 'scanning' | 'complete';
+type ScanState = 'idle' | 'scanning' | 'complete' | 'error';
+
+interface MeshCounts {
+  vertices: number;
+  faces: number;
+}
 
 export default function ScanScreen() {
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [vertices, setVertices] = useState(0);
   const [faces, setFaces] = useState(0);
-  const [triangles, setTriangles] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [lidarAvailable, setLidarAvailable] = useState<boolean | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track mesh counts per anchor — ARKit sends updates for individual anchors,
+  // we sum them here
+  const anchorCountsRef = useRef<Map<string, MeshCounts>>(new Map());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const meshSubscriptionRef = useRef<{ remove: () => void } | null>(null);
+  const errorSubscriptionRef = useRef<{ remove: () => void } | null>(null);
 
   // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const reticleOpacity = useRef(new Animated.Value(0.6)).current;
-  const buttonGlow = useRef(new Animated.Value(0)).current;
-  const bracketRotate = useRef(new Animated.Value(0)).current;
   const dotPulse = useRef(new Animated.Value(1)).current;
+
+  // Check LiDAR availability on mount
+  useEffect(() => {
+    try {
+      const available = ScandoLidar.isLidarAvailable();
+      setLidarAvailable(available);
+    } catch (e) {
+      console.warn('Failed to check LiDAR availability', e);
+      setLidarAvailable(false);
+    }
+  }, []);
 
   // Idle reticle breathing animation
   useEffect(() => {
@@ -76,10 +97,9 @@ export default function ScanScreen() {
     return () => pulse.stop();
   }, [dotPulse]);
 
-  // Scanning animations
+  // Scanning button pulse
   useEffect(() => {
     if (scanState === 'scanning') {
-      // Button pulse
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -97,81 +117,127 @@ export default function ScanScreen() {
         ]),
       );
       pulse.start();
-
-      // Button glow
-      const glow = Animated.loop(
-        Animated.sequence([
-          Animated.timing(buttonGlow, {
-            toValue: 1,
-            duration: 1200,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: false,
-          }),
-          Animated.timing(buttonGlow, {
-            toValue: 0,
-            duration: 1200,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: false,
-          }),
-        ]),
-      );
-      glow.start();
-
-      // Bracket rotation
-      const rotate = Animated.loop(
-        Animated.timing(bracketRotate, {
-          toValue: 1,
-          duration: 8000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-      );
-      rotate.start();
-
       return () => {
         pulse.stop();
-        glow.stop();
-        rotate.stop();
         pulseAnim.setValue(1);
-        buttonGlow.setValue(0);
-        bracketRotate.setValue(0);
       };
     }
-  }, [scanState, pulseAnim, buttonGlow, bracketRotate]);
+  }, [scanState, pulseAnim]);
 
-  // Data simulation interval
+  // Cleanup on unmount
   useEffect(() => {
-    if (scanState === 'scanning') {
-      intervalRef.current = setInterval(() => {
-        setVertices((v) => v + Math.floor(Math.random() * 1200 + 400));
-        setFaces((f) => f + Math.floor(Math.random() * 2400 + 800));
-        setTriangles((t) => t + Math.floor(Math.random() * 3600 + 1200));
-      }, 100);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (meshSubscriptionRef.current) meshSubscriptionRef.current.remove();
+      if (errorSubscriptionRef.current) errorSubscriptionRef.current.remove();
+      // Best-effort stop if still scanning
+      ScandoLidar.stopSession().catch(() => {});
+    };
+  }, []);
 
+  const handleScanPress = useCallback(async () => {
+    if (scanState === 'scanning') {
+      // Stop the scan
+      try {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        if (meshSubscriptionRef.current) {
+          meshSubscriptionRef.current.remove();
+          meshSubscriptionRef.current = null;
+        }
+        if (errorSubscriptionRef.current) {
+          errorSubscriptionRef.current.remove();
+          errorSubscriptionRef.current = null;
+        }
+        await ScandoLidar.stopSession();
+        setScanState('complete');
+      } catch (e) {
+        console.warn('Failed to stop session', e);
+        setScanState('complete');
+      }
+      return;
+    }
+
+    // Request camera permission if not granted
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        setErrorMessage('Camera permission is required to scan');
+        setScanState('error');
+        return;
+      }
+    }
+
+    // Reset state
+    setVertices(0);
+    setFaces(0);
+    setElapsed(0);
+    setErrorMessage(null);
+    anchorCountsRef.current.clear();
+
+    try {
+      // Subscribe to mesh updates
+      meshSubscriptionRef.current = ScandoLidar.addListener(
+        'onMeshUpdate',
+        (event: {
+          anchorId: string;
+          vertexCount: number;
+          faceCount: number;
+        }) => {
+          anchorCountsRef.current.set(event.anchorId, {
+            vertices: event.vertexCount,
+            faces: event.faceCount,
+          });
+          // Sum all anchor counts
+          let totalV = 0;
+          let totalF = 0;
+          for (const counts of anchorCountsRef.current.values()) {
+            totalV += counts.vertices;
+            totalF += counts.faces;
+          }
+          setVertices(totalV);
+          setFaces(totalF);
+        },
+      );
+
+      errorSubscriptionRef.current = ScandoLidar.addListener(
+        'onError',
+        (event: { code: string; message: string }) => {
+          console.warn('LiDAR error', event);
+          setErrorMessage(event.message);
+          setScanState('error');
+        },
+      );
+
+      // Start timer
       timerRef.current = setInterval(() => {
         setElapsed((e) => e + 1);
       }, 1000);
 
-      return () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        if (timerRef.current) clearInterval(timerRef.current);
-      };
-    }
-  }, [scanState]);
-
-  const handleScanPress = useCallback(() => {
-    if (scanState === 'idle' || scanState === 'complete') {
-      setVertices(0);
-      setFaces(0);
-      setTriangles(0);
-      setElapsed(0);
+      // Start the actual ARKit session
+      await ScandoLidar.startSession();
       setScanState('scanning');
-    } else if (scanState === 'scanning') {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (timerRef.current) clearInterval(timerRef.current);
-      setScanState('complete');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to start scan';
+      console.warn('Failed to start session', e);
+      setErrorMessage(msg);
+      setScanState('error');
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (meshSubscriptionRef.current) {
+        meshSubscriptionRef.current.remove();
+        meshSubscriptionRef.current = null;
+      }
+      if (errorSubscriptionRef.current) {
+        errorSubscriptionRef.current.remove();
+        errorSubscriptionRef.current = null;
+      }
     }
-  }, [scanState]);
+  }, [scanState, permission, requestPermission]);
 
   const formatElapsed = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -179,25 +245,42 @@ export default function ScanScreen() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const bracketSpin = bracketRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  const glowColor = buttonGlow.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['rgba(0, 217, 255, 0.0)', 'rgba(0, 217, 255, 0.35)'],
-  });
-
   const isScanning = scanState === 'scanning';
   const isComplete = scanState === 'complete';
+  const isError = scanState === 'error';
+
+  // Show camera permission prompt if needed
+  if (permission && !permission.granted && permission.canAskAgain === false) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.permissionContainer}>
+          <Text style={styles.permissionTitle}>CAMERA ACCESS REQUIRED</Text>
+          <Text style={styles.permissionText}>
+            AsBuilt LiDAR needs camera access to scan. Enable it in Settings.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
+      {/* AR Camera View as background */}
+      <ScandoLidarView style={StyleSheet.absoluteFillObject} />
+
+      {/* Dark overlay so UI is readable */}
+      <View style={styles.overlay} pointerEvents="none" />
+
       {/* Top device readout strip */}
       <View style={styles.deviceStrip}>
         <Text style={styles.deviceText}>
-          {isScanning ? 'LiDAR: ACTIVE' : 'LiDAR: UNAVAILABLE (Web Preview)'}
+          {lidarAvailable === null
+            ? 'LiDAR: CHECKING...'
+            : lidarAvailable
+              ? isScanning
+                ? 'LiDAR: ACTIVE'
+                : 'LiDAR: READY'
+              : 'LiDAR: UNAVAILABLE'}
         </Text>
         <View
           style={[
@@ -205,7 +288,9 @@ export default function ScanScreen() {
             {
               backgroundColor: isScanning
                 ? colors.semantic.success
-                : colors.text.tertiary,
+                : lidarAvailable
+                  ? colors.accent.secondary
+                  : colors.semantic.error,
             },
           ]}
         />
@@ -213,34 +298,26 @@ export default function ScanScreen() {
 
       {/* Top bar: wordmark + tier badge */}
       <View style={styles.topBar}>
-        <Text style={styles.wordmark}>SCANDO</Text>
+        <Text style={styles.wordmark}>ASBUILT</Text>
         <View style={styles.tierBadge}>
           <Text style={styles.tierText}>FREE</Text>
         </View>
       </View>
 
       {/* Main viewport area */}
-      <View style={styles.viewport}>
-        {/* Scan preview background */}
-        <ScanPreview scanning={isScanning} style={styles.previewBg} />
-
+      <View style={styles.viewport} pointerEvents="none">
         {/* Reticle overlay */}
         <Animated.View
           style={[
             styles.reticleContainer,
             {
               opacity: isScanning ? 1 : reticleOpacity,
-              transform: isScanning ? [{ rotate: bracketSpin }] : [],
             },
           ]}
         >
-          {/* Top-left bracket */}
           <View style={[styles.bracket, styles.bracketTL]} />
-          {/* Top-right bracket */}
           <View style={[styles.bracket, styles.bracketTR]} />
-          {/* Bottom-left bracket */}
           <View style={[styles.bracket, styles.bracketBL]} />
-          {/* Bottom-right bracket */}
           <View style={[styles.bracket, styles.bracketBR]} />
         </Animated.View>
 
@@ -249,18 +326,21 @@ export default function ScanScreen() {
           style={[
             styles.centerDot,
             {
-              transform: [{ scale: isScanning ? dotPulse : 1 }],
+              transform: [{ scale: dotPulse }],
               backgroundColor: isScanning
                 ? colors.accent.secondary
                 : colors.text.tertiary,
             },
           ]}
         />
-
-        {/* Crosshair lines */}
-        <View style={styles.crosshairH} />
-        <View style={styles.crosshairV} />
       </View>
+
+      {/* Error message */}
+      {isError && errorMessage && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      )}
 
       {/* Status readout */}
       <View style={styles.readoutContainer}>
@@ -277,11 +357,10 @@ export default function ScanScreen() {
           </View>
           <View style={styles.readoutDivider} />
           <View style={styles.readoutCell}>
-            <Text style={styles.readoutValue}>{formatNumber(triangles)}</Text>
-            <Text style={styles.readoutLabel}>TRIANGLES</Text>
+            <Text style={styles.readoutValue}>{formatElapsed(elapsed)}</Text>
+            <Text style={styles.readoutLabel}>ELAPSED</Text>
           </View>
         </View>
-        <Text style={styles.elapsedText}>T+ {formatElapsed(elapsed)}</Text>
       </View>
 
       {/* Scan button */}
@@ -290,7 +369,6 @@ export default function ScanScreen() {
           style={[
             styles.buttonGlowRing,
             isScanning && {
-              backgroundColor: glowColor,
               transform: [{ scale: pulseAnim }],
             },
           ]}
@@ -303,22 +381,16 @@ export default function ScanScreen() {
             ]}
             onPress={handleScanPress}
             activeOpacity={0.7}
+            disabled={lidarAvailable === false}
           >
-            <View
+            <Text
               style={[
-                styles.scanButtonInner,
-                isScanning && styles.scanButtonInnerActive,
+                styles.scanButtonText,
+                isScanning && styles.scanButtonTextActive,
               ]}
             >
-              <Text
-                style={[
-                  styles.scanButtonText,
-                  isScanning && styles.scanButtonTextActive,
-                ]}
-              >
-                {isScanning ? 'STOP' : isComplete ? 'RESCAN' : 'SCAN'}
-              </Text>
-            </View>
+              {isScanning ? 'STOP' : isComplete ? 'RESCAN' : 'SCAN'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -336,19 +408,47 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   },
 
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 10, 15, 0.35)',
+  },
+
+  // Permission denied
+  permissionContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  permissionTitle: {
+    fontFamily: fontFamily.mono,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.semantic.error,
+    letterSpacing: 3,
+    marginBottom: spacing.md,
+  },
+  permissionText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
   // Device strip
   deviceStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: spacing.xxxl,
+    paddingTop: 56,
     paddingBottom: spacing.xs,
     gap: spacing.sm,
   },
   deviceText: {
     fontFamily: fontFamily.mono,
     fontSize: fontSize.xxs,
-    color: colors.text.tertiary,
+    color: colors.text.primary,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
@@ -377,12 +477,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.subscription.free,
     borderRadius: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   tierText: {
     fontFamily: fontFamily.mono,
-    fontSize: fontSize.xxs,
+    fontSize: 9,
     fontWeight: fontWeight.semibold,
     color: colors.subscription.free,
     letterSpacing: 2,
@@ -393,23 +493,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    position: 'relative',
   },
-  previewBg: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-
-  // Reticle
   reticleContainer: {
     width: RETICLE_SIZE,
     height: RETICLE_SIZE,
@@ -417,42 +501,34 @@ const styles = StyleSheet.create({
   },
   bracket: {
     position: 'absolute',
+    width: BRACKET_LENGTH,
+    height: BRACKET_LENGTH,
     borderColor: colors.accent.secondary,
   },
   bracketTL: {
     top: 0,
     left: 0,
-    width: BRACKET_LENGTH,
-    height: BRACKET_LENGTH,
     borderTopWidth: BRACKET_THICKNESS,
     borderLeftWidth: BRACKET_THICKNESS,
   },
   bracketTR: {
     top: 0,
     right: 0,
-    width: BRACKET_LENGTH,
-    height: BRACKET_LENGTH,
     borderTopWidth: BRACKET_THICKNESS,
     borderRightWidth: BRACKET_THICKNESS,
   },
   bracketBL: {
     bottom: 0,
     left: 0,
-    width: BRACKET_LENGTH,
-    height: BRACKET_LENGTH,
     borderBottomWidth: BRACKET_THICKNESS,
     borderLeftWidth: BRACKET_THICKNESS,
   },
   bracketBR: {
     bottom: 0,
     right: 0,
-    width: BRACKET_LENGTH,
-    height: BRACKET_LENGTH,
     borderBottomWidth: BRACKET_THICKNESS,
     borderRightWidth: BRACKET_THICKNESS,
   },
-
-  // Center dot
   centerDot: {
     position: 'absolute',
     width: 8,
@@ -460,27 +536,28 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  // Crosshair lines
-  crosshairH: {
-    position: 'absolute',
-    width: RETICLE_SIZE * 0.35,
-    height: 1,
-    backgroundColor: colors.accent.secondary,
-    opacity: 0.25,
+  // Error
+  errorContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginHorizontal: spacing.lg,
+    backgroundColor: 'rgba(248, 113, 113, 0.15)',
+    borderWidth: 1,
+    borderColor: colors.semantic.error,
+    borderRadius: 6,
+    marginBottom: spacing.sm,
   },
-  crosshairV: {
-    position: 'absolute',
-    width: 1,
-    height: RETICLE_SIZE * 0.35,
-    backgroundColor: colors.accent.secondary,
-    opacity: 0.25,
+  errorText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: colors.semantic.error,
+    textAlign: 'center',
   },
 
   // Readout
   readoutContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
   completeLabel: {
     fontFamily: fontFamily.mono,
@@ -488,17 +565,18 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.semantic.success,
     letterSpacing: 3,
+    textAlign: 'center',
     marginBottom: spacing.sm,
   },
   readoutGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface.default,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(26, 26, 46, 0.85)',
     borderRadius: 8,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border.light,
+    paddingVertical: spacing.md,
   },
   readoutCell: {
     flex: 1,
@@ -508,73 +586,52 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.mono,
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
-    color: colors.text.primary,
+    color: colors.accent.secondary,
     letterSpacing: 0.5,
   },
   readoutLabel: {
     fontFamily: fontFamily.mono,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: fontWeight.medium,
     color: colors.text.tertiary,
     letterSpacing: 2,
-    marginTop: spacing.xxs,
+    marginTop: 4,
   },
   readoutDivider: {
     width: 1,
     height: 28,
-    backgroundColor: colors.border.default,
-    marginHorizontal: spacing.sm,
-  },
-  elapsedText: {
-    fontFamily: fontFamily.mono,
-    fontSize: fontSize.xs,
-    color: colors.text.tertiary,
-    letterSpacing: 2,
-    marginTop: spacing.sm,
+    backgroundColor: colors.border.light,
   },
 
-  // Button
+  // Scan button
   buttonArea: {
     alignItems: 'center',
-    paddingBottom: spacing.xxl,
-    paddingTop: spacing.sm,
+    paddingBottom: 40,
+    paddingTop: spacing.lg,
   },
   buttonGlowRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scanButton: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     borderWidth: 3,
     borderColor: colors.accent.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(10, 10, 15, 0.6)',
   },
   scanButtonActive: {
     borderColor: colors.semantic.error,
+    backgroundColor: 'rgba(248, 113, 113, 0.2)',
   },
   scanButtonComplete: {
     borderColor: colors.semantic.success,
-  },
-  scanButtonInner: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.background.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  scanButtonInnerActive: {
-    backgroundColor: 'rgba(248, 113, 113, 0.1)',
-    borderColor: colors.semantic.error,
   },
   scanButtonText: {
     fontFamily: fontFamily.mono,

@@ -1,3 +1,7 @@
+export interface EventSubscription {
+  remove(): void;
+}
+
 export interface ScandoLidarModuleInterface {
   startSession(): Promise<void>;
   stopSession(): Promise<void>;
@@ -6,6 +10,18 @@ export interface ScandoLidarModuleInterface {
   getMeshSnapshot(): Promise<NativeMeshSnapshot>;
   exportToFile(format: string, outputPath: string): Promise<string>;
   isLidarAvailable(): boolean;
+  addListener(
+    eventName: 'onMeshUpdate',
+    listener: (event: MeshUpdateEvent) => void,
+  ): EventSubscription;
+  addListener(
+    eventName: 'onSessionStateChange',
+    listener: (event: SessionStateChangeEvent) => void,
+  ): EventSubscription;
+  addListener(
+    eventName: 'onError',
+    listener: (event: LidarErrorEvent) => void,
+  ): EventSubscription;
 }
 
 export interface NativeMeshSnapshot {
