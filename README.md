@@ -2,7 +2,7 @@
 
 > As-built. LiDAR scanning for iPhone Pro with SketchUp-ready export.
 
-[Apple Developer Account](https://developer.apple.com/account) · [Certificates & Profiles](https://developer.apple.com/account/resources/certificates/list) · [Expo Dashboard](https://expo.dev) · [EAS Build Docs](https://docs.expo.dev/build/introduction/) · [ARKit Docs](https://developer.apple.com/documentation/arkit) · [StoreKit 2](https://developer.apple.com/storekit/) · [CloudKit](https://developer.apple.com/icloud/cloudkit/) · [GitHub Repo](https://github.com/TortoiseWolfe/ScanDo)
+[Apple Developer Account](https://developer.apple.com/account) · [App Store Connect](https://appstoreconnect.apple.com) · [Certificates & Profiles](https://developer.apple.com/account/resources/certificates/list) · [Expo Dashboard](https://expo.dev) · [EAS Build Docs](https://docs.expo.dev/build/introduction/) · [ARKit Docs](https://developer.apple.com/documentation/arkit) · [StoreKit 2](https://developer.apple.com/storekit/) · [CloudKit](https://developer.apple.com/icloud/cloudkit/) · [GitHub Repo](https://github.com/TortoiseWolfe/ScanDo)
 
 ## What is ScanDo?
 

@@ -100,6 +100,8 @@ class SubscriptionManager {
       throw SubscriptionError.verificationFailed
     case .verified(let safe):
       return safe
+    @unknown default:
+      throw SubscriptionError.verificationFailed
     }
   }
 }
