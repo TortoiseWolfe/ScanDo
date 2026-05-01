@@ -1,7 +1,7 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
-  name: 'ScanDo',
+  name: 'AsBuilt LiDAR',
   slug: 'scando',
   version: '0.1.0',
   orientation: 'portrait',
@@ -14,15 +14,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     backgroundColor: '#000000',
   },
   ios: {
-    bundleIdentifier: 'com.scando.app',
+    bundleIdentifier: 'com.asbuilt.lidar',
     supportsTablet: false,
     infoPlist: {
       NSCameraUsageDescription:
-        'ScanDo uses the camera with LiDAR for 3D scanning.',
+        'AsBuilt LiDAR uses the camera with LiDAR for 3D scanning.',
       NSPhotoLibraryUsageDescription:
-        'ScanDo saves scan exports to your photo library.',
+        'AsBuilt LiDAR saves scan exports to your photo library.',
       NSLocationWhenInUseUsageDescription:
-        'ScanDo tags scans with GPS coordinates for georeferenced exports.',
+        'AsBuilt LiDAR tags scans with GPS coordinates for georeferenced exports.',
       UIRequiredDeviceCapabilities: ['arkit', 'lidar'],
     },
     config: {
@@ -35,6 +35,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: ['expo-router'],
   scheme: 'scando',
+  extra: {
+    eas: {
+      projectId: '81d92d4c-835c-4b34-ba85-c4512430e955',
+    },
+  },
   experiments: {
     typedRoutes: true,
   },

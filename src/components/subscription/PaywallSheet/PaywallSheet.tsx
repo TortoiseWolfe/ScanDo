@@ -32,7 +32,7 @@ const PaywallSheet: React.FC<PaywallSheetProps> = ({
       <Text style={styles.title}>Unlock {feature}</Text>
       <Text style={styles.subtitle}>
         This feature requires a{' '}
-        <Text style={styles.proHighlight}>ScanDo Pro</Text> subscription
+        <Text style={styles.proHighlight}>AsBuilt LiDAR Pro</Text> subscription
       </Text>
 
       {/* Benefits list */}

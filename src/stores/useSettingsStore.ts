@@ -26,7 +26,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     hapticFeedback: true,
     autoSave: true,
     exportQuality: 'high',
-    measurementUnit: 'metric',
+    measurementUnit: 'imperial',
 
     toggleHapticFeedback: () =>
       set((state) => ({ hapticFeedback: !state.hapticFeedback })),

@@ -12,7 +12,7 @@ export default function SubscriptionScreen() {
       {/* Hero header */}
       <View style={styles.heroSection}>
         <Text style={styles.heroLabel}>UPGRADE TO</Text>
-        <Text style={styles.heroTitle}>SCANDO PRO</Text>
+        <Text style={styles.heroTitle}>ASBUILT PRO</Text>
         <View style={styles.heroDivider} />
       </View>
 
@@ -64,7 +64,7 @@ export default function SubscriptionScreen() {
             pressed && styles.subscribeButtonPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Subscribe to ScanDo Pro"
+          accessibilityLabel="Subscribe to AsBuilt LiDAR Pro"
         >
           <Text style={styles.subscribeText}>SUBSCRIBE</Text>
         </Pressable>
