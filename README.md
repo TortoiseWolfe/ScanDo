@@ -1,5 +1,8 @@
 # ScanDo
 
+> [!NOTE]
+> **Paused, never released (October 2026).** This LiDAR app never reached the App Store, so there is nothing here to install. The work moved to photos, which run on any phone: a free beta is at **[asbuilt.expo.app](https://asbuilt.expo.app)**, in your phone's browser. LiDAR may come back later as an upgrade. Questions: [open an issue](https://github.com/TortoiseWolfe/ScanDo/issues/new).
+
 > As-built. LiDAR scanning for iPhone Pro with SketchUp-ready export.
 
 [Apple Developer Account](https://developer.apple.com/account) · [Certificates & Profiles](https://developer.apple.com/account/resources/certificates/list) · [Expo Dashboard](https://expo.dev) · [EAS Build Docs](https://docs.expo.dev/build/introduction/) · [ARKit Docs](https://developer.apple.com/documentation/arkit) · [StoreKit 2](https://developer.apple.com/storekit/) · [CloudKit](https://developer.apple.com/icloud/cloudkit/) · [GitHub Repo](https://github.com/TortoiseWolfe/ScanDo)
